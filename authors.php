@@ -27,18 +27,20 @@
     Changelog (sorted by date):
         [DATE]      [NICKNAME]      [CHANGES]
         2012-??-??  weinbauer73     - created
+        2015-09-02  susnux          - sorted alphabetically by name
 */
 
     $authors = array();
     //$authors[]=array('name'=>'K. Jacobs','role'=>'Owner since 2009');
     $authors[]=array('name'=>'ajfrenzel','role'=>'Committer/Bugfix');
-    $authors[]=array('name'=>'tgrziwa','role'=>'Committer/Bugfix');
-    $authors[]=array('name'=>'d.lipschinski','role'=>'Committer/Bugfix/Neue Funktionen');
-    $authors[]=array('name'=>'Michael Buesch','role'=>'Reichelt/Pollin Preissuch Script');
-    $authors[]=array('name'=>'bubbles.red','role'=>'Committer/Bugfix/Neue Funktionen');
-    $authors[]=array('name'=>'Matthias Weißer','role'=>'EAGLE3D / Bauteile Renderscript (eagle3d.py)');
-    $authors[]=array('name'=>'Urban B.','role'=>'Committer/Klassen/Neue Funktionen/Neue Footprints');
     $authors[]=array('name'=>'André Althaus','role'=>'Neue Funktionen');
+    $authors[]=array('name'=>'bubbles.red','role'=>'Committer/Bugfix/Neue Funktionen');
+    $authors[]=array('name'=>'d.lipschinski','role'=>'Committer/Bugfix/Neue Funktionen');
+    $authors[]=array('name'=>'Ferdinand Thiessen', 'role'=>'Committer/Bugfix'); //susnux
+    $authors[]=array('name'=>'Matthias Weißer','role'=>'EAGLE3D / Bauteile Renderscript (eagle3d.py)');
+    $authors[]=array('name'=>'Michael Buesch','role'=>'Reichelt/Pollin Preissuch Script');
+    $authors[]=array('name'=>'tgrziwa','role'=>'Committer/Bugfix');
     $authors[]=array('name'=>'Udo Neist','role'=>'Committer/Templates/Neue Funktionen');
+    $authors[]=array('name'=>'Urban B.','role'=>'Committer/Klassen/Neue Funktionen/Neue Footprints');
 
 ?>
