@@ -42,6 +42,8 @@
         public $method;
         /** @brief Extra parameters given to the server. */
         public $parameters;
+        /** @brief Header-parameter given to the server. */
+        public $header;
 
         /** @brief Constructor
          *         Initialisizes the class attributes, by calling parameter-extraction function on request.
@@ -54,6 +56,7 @@
                 $this->url_elements = explode('/', $_SERVER['PATH_INFO']);
             }
             $this->parse_parameters();
+            $this->parse_header();
             // initialise json as default format
             $this->format = 'json';
             if(isset($this->parameters['format'])) {
@@ -104,6 +107,20 @@
                     break;
             }
             $this->parameters = $parameters;
+        }
+
+        /** @brief Parses given headers into an array. */
+        protected function parse_header()
+        {
+            // Get headers from request...
+            $headers = array();
+            foreach($_SERVER as $key => $value) {
+                if (substr($key, 0, 5) <> 'HTTP_')
+                    continue;
+                $header = str_replace(' ', '-', ucwords(str_replace('_', ' ', strtolower(substr($key, 5)))));
+                $headers[$header] = $value;
+            }
+            return $headers;
         }
     }
 ?>

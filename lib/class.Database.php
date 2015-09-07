@@ -38,6 +38,7 @@
 */
 
     include_once(BASE.'/updates/db_update_steps.php');
+    include_once(BASE.'/lib/lib.exceptions.php');
 
     /**
      * @file class.Database.php
@@ -878,7 +879,7 @@
                                         ' WHERE id=?', array($id), $fetch_style);
 
             if (count($query_data) == 0)
-                throw new Exception('Es existiert kein Datensatz mit der ID "'.$id.'" in der Tabelle "'.$tablename.'"!');
+                throw new NoSuchElementException('Es existiert kein Datensatz mit der ID "'.$id.'" in der Tabelle "'.$tablename.'"!');
 
             return $query_data[0];
         }
