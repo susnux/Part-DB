@@ -279,14 +279,21 @@
     *   autoload function for classes
     *
     *********************************************************************************/
-
-    function __autoload($classname)
+    function basic_autoloader($classname)
     {
+        $classpath = "";
         if (strpos($classname, 'vlib') === 0)
-            include_once(BASE.'/lib/vlib/'.$classname.'.php');
+            $classpath = BASE . '/lib/vlib/' . $classname . '.php';
         else
-            include_once(BASE.'/lib/class.'.$classname.'.php');
+            $classpath = BASE . '/lib/class.' . $classname . '.php';
+        if (file_exists($classpath))
+        {
+            include_once($classpath);
+            return true;
+        }
+        return false;
     }
+    spl_autoload_register('basic_autoloader');
 
     /********************************************************************************
     *

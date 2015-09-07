@@ -24,16 +24,6 @@
         2015-09-06  susnux         - created
 */
 
-// Autoload classes from lib/
-spl_autoload_register(function($class){
-    if (file_exists('lib/class.' . $class . '.php'))
-    {
-        include "lib/class.$class.php";
-        return true;
-    }
-    return false;
-});
-
 /** @file  BaseController.php
  *  @brief Class BaseController
  *
@@ -58,6 +48,10 @@ abstract class BaseController
       * @sa User
       */
     protected $current_user;
+    /** @brief Supported HTTP methods by this controller. Needed by 405 failure ('Allow' header).
+     *  @note When extending this class, simply add your accepted methods.
+     */
+    protected $supported_methods;
 
     /** @brief Constructor
       *        Sets database, log and current_user
@@ -68,6 +62,20 @@ abstract class BaseController
         $this->database           = new Database();
         $this->log                = new Log($this->database);
         $this->current_user       = new User($this->database, $this->current_user, $this->log, 1); // admin
+        $this->supported_methods  = array();
     }
+
+    /** @brief Return supported HTTP methods by this controller */
+    public function get_supported_methods()
+    {
+        return $this->supported_methods;
+    }
+    /* Stub implementation for a method would be:
+     * (Returning 405 for wrong method ;-)  )
+     * public function get_action()
+     * {
+     *     return array('status' => 405);
+     * }
+     */
 }
 ?>
