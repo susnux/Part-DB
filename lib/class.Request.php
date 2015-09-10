@@ -42,8 +42,8 @@
         public $method;
         /** @brief Extra parameters given to the server. */
         public $parameters;
-        /** @brief Header-parameter given to the server. */
-        public $header;
+        /** @brief Header-parameters given to the server. */
+        public $headers;
 
         /** @brief Constructor
          *         Initialisizes the class attributes, by calling parameter-extraction function on request.
@@ -55,8 +55,8 @@
             if (isset($_SERVER['PATH_INFO'])) {
                 $this->url_elements = explode('/', $_SERVER['PATH_INFO']);
             }
-            $this->parse_parameters();
             $this->parse_header();
+            $this->parse_parameters();
             // initialise json as default format
             $this->format = 'json';
             if(isset($this->parameters['format'])) {
@@ -79,11 +79,7 @@
 
             // now how about PUT/POST bodies? These override what we got from GET
             $body = file_get_contents("php://input");
-            $content_type = false;
-            if(isset($_SERVER['CONTENT_TYPE'])) {
-                $content_type = $_SERVER['CONTENT_TYPE'];
-            }
-            switch($content_type) {
+            switch($this->headers['Content-Type']) {
                 case "application/json":
                     $body_params = json_decode($body);
                     if($body_params) {
@@ -102,7 +98,7 @@
                     $this->format = "html";
                     break;
                 default:
-                    debug('error', 'Unknown content type given: >>' . $content_type . '<<', __FILE__, __LINE__, __METHOD__);
+                    debug('warning', 'Unknown content type given: >>' . $content_type . '<<', __FILE__, __LINE__, __METHOD__);
                     // we could parse other supported formats here
                     break;
             }
@@ -112,15 +108,42 @@
         /** @brief Parses given headers into an array. */
         protected function parse_header()
         {
-            // Get headers from request...
-            $headers = array();
-            foreach($_SERVER as $key => $value) {
-                if (substr($key, 0, 5) <> 'HTTP_')
-                    continue;
-                $header = str_replace(' ', '-', ucwords(str_replace('_', ' ', strtolower(substr($key, 5)))));
-                $headers[$header] = $value;
+            // If function is not available (e.g. nginx server) use our own function
+            if (!function_exists('getallheaders'))
+            {
+                function getallheaders()
+                {
+                    if (!is_array($_SERVER))
+                    {
+                        return array();
+                    }
+
+                    $headers = array();
+                    foreach ($_SERVER as $name => $value)
+                    {
+                        if (substr($name, 0, 5) == 'HTTP_')
+                        {
+                            $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($name, 5)))))] = $value;
+                        }
+                        elseif ($name == 'CONTENT_TYPE' || $name == 'CONTENT_LENGTH')
+                        {
+                            $headers[str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', $name))))] = $value;
+                        }
+                    }
+                    return $headers;
+                }
             }
-            return $headers;
+            $headers = getallheaders();
+            // Handle known headers
+            if (isset($headers['Range']))
+            {
+                $values = explode('-', str_replace('items=', '', $headers['Range']));
+                if (count($values) == 2 && is_numeric($values[0]) && is_numeric($values[1]))
+                {
+                    $headers['Range'] = array('start' => $values[0], 'end' => (int)$values[1]);
+                }
+            }
+            $this->headers = $headers;
         }
     }
 ?>

@@ -49,13 +49,25 @@ if (class_exists($controller_name)) {
         header('Allow: ' . strtoupper(implode(", ", $controller->get_supported_methods())));
         exit();
     }
+
     $result = $controller->$action_name($request);
     if (isset($result['status']))
         http_response_code($result['status']);
+    if (isset($result['headers']) && is_array($result['headers']))
+    {
+        foreach ($result['headers'] as $key => $value)
+            header($key . ': ' . $value);
+    }
     if (isset($result['body']))
-        print(json_encode($result['body']));
+        render_json($result['body']);
 } else {
     http_response_code(404);
     print("Requested resource not found.");
+}
+
+function render_json($body)
+{
+    header('Content-Type: application/json');
+    print(json_encode($body));
 }
 ?>
