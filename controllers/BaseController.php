@@ -48,6 +48,8 @@ abstract class BaseController
       * @sa User
       */
     protected $current_user;
+    /** @brief Name of the managed class, e.g. Part when extended as PartsController */
+    protected $managed_class_name;
     /** @brief Supported HTTP methods by this controller. Needed by 405 failure ('Allow' header).
      *  @note When extending this class, simply add your accepted methods.
      */
@@ -55,20 +57,88 @@ abstract class BaseController
 
     /** @brief Constructor
       *        Sets database, log and current_user
+      * @param  class_name Name of the managed class (e.g. Category, User, Part...)
       * @throws Exception If database, log or user initialization failed.
       */
-    protected function __construct()
+    protected function __construct($class_name)
     {
         $this->database           = new Database();
         $this->log                = new Log($this->database);
         $this->current_user       = new User($this->database, $this->current_user, $this->log, 1); // admin
         $this->supported_methods  = array();
+        $this->managed_class_name = $class_name;
     }
 
     /** @brief Return supported HTTP methods by this controller */
     public function get_supported_methods()
     {
         return $this->supported_methods;
+    }
+
+    /** */
+    protected function check_match_headers($headers, $parameters)
+    {
+        if (isset($parameters['id']) && is_numeric($parameters['id']))
+        {
+            try
+            {
+                $obj = new $this->managed_class_name($this->database, $this->current_user, $this->log, (int)$parameters['id']);
+                $id_exsists = true;
+            }
+            catch (Exception $e)
+            {
+                if ($e instanceof NosuchElementException)
+                {
+                    $id_exsists = false;
+                }
+                else
+                {
+                    debug('error', 'Got unexpected exception, message: ' . $e->getMessage(),
+                          __FILE__, __LINE__, __METHOD__);
+                    return 500; // Internal Error
+                }
+            }
+        }
+
+        if (isset($parameters['name']))
+        {
+            $found = array();
+            $parent_id = (isset($parameters['parent']) && is_numeric($parameters['parent'])) ? (int)$parameters['parent'] : 0;
+            try
+            {
+                $class_name = $this->managed_class_name;
+                $found = $class_name::search($this->database, $this->current_user, $this->log,
+                                            $parameters['name'], true);
+            }
+            catch (exception $e)
+            {
+                debug('error', 'Got unexpected exception, message: ' . $e->getMessage(),
+                      __FILE__, __LINE__, __METHOD__);
+                return 500;
+            }
+            if (count($found) == 0)
+                $name_exsists = false;
+            else
+            {
+                foreach($found as $possible_match)
+                {
+                    if ($possible_match->get_parent_id() == $parent_id)
+                        $name_exsists = true;
+                }
+            }
+        }
+
+        if (isset($headers['If-None-Match']) && $headers['If-None-Match'] == '*')
+        {
+            if ((isset($id_exsists) && $id_exsists) || (isset($name_exsists) && $name_exsists))
+                return 412; // Id or name already exsists (Precondition failed)
+        }
+        elseif (isset($headers['If-Match']) && $headers['If-Match'] == '*')
+        {
+            if (isset($id_exsists) && !$id_exsists)
+                return 412; // Id does not exsists -> Precondition failed
+        }
+        return 200; // Ok no header
     }
     /* Stub implementation for a method would be:
      * (Returning 405 for wrong method ;-)  )
