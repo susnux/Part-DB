@@ -79,28 +79,32 @@
 
             // now how about PUT/POST bodies? These override what we got from GET
             $body = file_get_contents("php://input");
-            switch($this->headers['Content-Type']) {
-                case "application/json":
-                    $body_params = json_decode($body);
-                    if($body_params) {
-                        foreach($body_params as $param_name => $param_value) {
-                            $parameters[$param_name] = $param_value;
-                        }
+            $content_type = false;
+            if (isset($this->headers['Content-Type']))
+                $content_type = $this->headers['Content-Type'];
+            if (preg_match('@application/json.*@', $content_type))
+            {
+                $body_params = json_decode($body);
+                if($body_params) {
+                    foreach($body_params as $param_name => $param_value) {
+                        $parameters[$param_name] = $param_value;
                     }
-                    $this->format = "json";
-                    break;
-                case "application/x-www-form-urlencoded":
+                }
+                $this->format = "json";
+            }
+            elseif (preg_match('@application/x-www-form-urlencoded.*@', $content_type))
+            {
                     parse_str($body, $postvars);
                     foreach($postvars as $field => $value) {
                         $parameters[$field] = $value;
 
                     }
                     $this->format = "html";
-                    break;
-                default:
+            }
+            else
+            {
                     debug('warning', 'Unknown content type given: >>' . $content_type . '<<', __FILE__, __LINE__, __METHOD__);
                     // we could parse other supported formats here
-                    break;
             }
             $this->parameters = $parameters;
         }
