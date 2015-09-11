@@ -48,7 +48,8 @@ abstract class BaseController
       * @sa User
       */
     protected $current_user;
-    /** @brief Name of the managed class, e.g. Part when extended as PartsController */
+    /** @brief Name of the managed class, e.g. Part when extended as PartsController
+    */
     protected $managed_class_name;
     /** @brief Supported HTTP methods by this controller. Needed by 405 failure ('Allow' header).
      *  @note When extending this class, simply add your accepted methods.
@@ -75,6 +76,148 @@ abstract class BaseController
         return $this->supported_methods;
     }
 
+    /** @brief Converts given class instance to array with membervariables
+        @note You need to implement this function if you extend your class from this.
+              Example for this function would be:
+              class with members "id", "parent_id", "name":
+              return array('id' => $class->get_id(), 'parent' => $class->get_parent_id(), '' => $class->get_name());
+    */
+    abstract protected function class_to_array($class);
+
+    /** @brief Returns result object with information about a single item 
+        @param id Id of the element which to fetch.
+     */
+    protected function get_single_information($id)
+    {
+        $class = null;
+        try
+        {
+            $class = new $this->managed_class_name($this->database, $this->current_user, $this->log, (int)$id);
+        }
+        catch (Exception $e)
+        {
+            if ($e instanceof NoSuchElementException)
+            {
+                return array('status' => Http::not_found);
+            } else {
+                debug(  'error', 'Got serious exception, which seems to be a server issue. Return 500.',
+                        __FILE__, __LINE__, __METHOD__);
+                return array('status' => Http::server_error);
+            }
+        }
+        return array(   'status' => Http::Ok,
+                        'body' => class_to_array($class));
+    }
+
+    protected function get_query_information($query, $range_header, $table_name)
+    {
+        // Check if Range header is set and if yes handle range
+        $range = '';
+        $data['headers']['Accept-Ranges'] = 'items';
+        if ($range_header != null)
+        {
+            $count_query = "SELECT COUNT(1) as number_of_categories FROM $table_name " . $query['query'] . $query['order'];
+            $result = null;
+            try
+            {
+                $result = $this->database->query($count_query, $query['keywords']);
+            }
+            catch (Exception $e)
+            {
+                debug('error', 'Got database exception: ' . $e->getMessage(),
+                __FILE__, __LINE__, __METHOD__);
+                return array('status' => Http::server_error);
+            }
+            if ($result[0]['number_of_categories'] == 0)
+                return array('status' => Http::no_content);
+            if ($range_header['start'] >= $result[0]['number_of_categories'])
+            {
+                debug('warning', 'Requested Range of: ' . $range_header['start'] .
+                '-' . $range_header['end'] . ' Categories could not be satisfied.',
+                __FILE__, __LINE__, __METHOD__);
+                return array('status' => Http::range_not_satisfiable);
+            }
+            $duration = $range_header['end'] - $range_header['start'] + 1;
+            $end = $range_header['end'];
+            // Real end (e.g. header end is greater then we have items)
+            if (($result[0]['number_of_categories'] - 1) < $range_header['end'])
+            {
+                $end = $result[0]['number_of_categories'] - 1;
+            }
+            $range = ' LIMIT ' . $range_header['start'] . ', ' . $duration;
+            $data['status'] = Http::partial_content;
+            $data['headers']['Content-Range'] = 'items ' . $range_header['start'] . '-' . $end . '/' . $result[0]['number_of_categories'];
+        }
+        
+        $query_str = "SELECT id FROM $table_name " . $query['query'] . $query['order'] . $range;
+        $query_data = array();
+        try
+        {
+            $query_data = $this->database->query($query_str, $query['keywords']);
+        }
+        catch (Exception $e)
+        {
+            debug('error', 'Got database exception: ' . $e->getMessage(),
+            __FILE__, __LINE__, __METHOD__);
+            return array('status' => Http::server_error);
+        }
+        $number = count($query_data);
+        if ($number == 0)
+            return array('status' => Http::no_content);
+        foreach ($query_data as $id)
+        {
+            $data['body'][] = $this->class_to_array(new $this->managed_class_name($this->database, $this->current_user, $this->log, (int)$id['id']));
+        }
+        return $data;
+    }
+
+    /** @brief Deletes requested element from database.
+        @return ARRAY('status' => HTTP_STATUS_CODE)
+        @todo Handle users correctly (a general todo)
+     */
+    protected function delete_item($id, $condition = null)
+    {
+        if ($condition == null)
+        {
+            function condition_func($obj)
+            {
+                return true;
+            }
+            $condition = 'condition_func';
+        }
+        $class = null;
+        try
+        {
+            $class = new $this->managed_class_name($this->database, $this->current_user, $this->log, (int)$id);
+        }
+        catch (Exception $e)
+        {
+            if ($e instanceof NoSuchElementException)
+            {
+                return array( 'status' => Http::not_found);
+            }
+            debug(  'error', 'Got serious exception, which seems to be a server issue. Return 500.',
+                     __FILE__, __LINE__, __METHOD__);
+            return array('status' => Http::server_error);
+        }
+        if (!$condition($class))
+        {
+            return array('status' => Http::conflict);
+        }
+        try
+        {
+            $class->delete();
+            $class = NULL;
+        }
+        catch (Exception $e)
+        {
+            debug('error', 'Could not delete item: ' . $class->get_name() . '. Error: ' . $e->getMessage(),
+                    __FILE__, __LINE__, __METHOD__);
+            return array('status' => Http::server_error); // Handle 401 403 when we add support for users
+        }
+        return array('status' => Http::no_content);
+    }
+
     /** */
     protected function check_match_headers($headers, $parameters)
     {
@@ -95,7 +238,7 @@ abstract class BaseController
                 {
                     debug('error', 'Got unexpected exception, message: ' . $e->getMessage(),
                           __FILE__, __LINE__, __METHOD__);
-                    return 500; // Internal Error
+                    throw new Exception();
                 }
             }
         }
@@ -114,7 +257,7 @@ abstract class BaseController
             {
                 debug('error', 'Got unexpected exception, message: ' . $e->getMessage(),
                       __FILE__, __LINE__, __METHOD__);
-                return 500;
+                throw new Exception();
             }
             if (count($found) == 0)
                 $name_exsists = false;
@@ -131,14 +274,14 @@ abstract class BaseController
         if (isset($headers['If-None-Match']) && $headers['If-None-Match'] == '*')
         {
             if ((isset($id_exsists) && $id_exsists) || (isset($name_exsists) && $name_exsists))
-                return 412; // Id or name already exsists (Precondition failed)
+                return false; // Id or name already exsists (Precondition failed)
         }
         elseif (isset($headers['If-Match']) && $headers['If-Match'] == '*')
         {
             if (isset($id_exsists) && !$id_exsists)
-                return 412; // Id does not exsists -> Precondition failed
+                return false; // Id does not exsists -> Precondition failed
         }
-        return 200; // Ok no header
+        return true; // Ok no header
     }
     /* Stub implementation for a method would be:
      * (Returning 405 for wrong method ;-)  )
