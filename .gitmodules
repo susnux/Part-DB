@@ -1,0 +1,12 @@
+[submodule "development/javascript/dstore"]
+	path = development/javascript/dstore
+	url = https://github.com/SitePen/dstore.git
+[submodule "development/javascript/dgrid"]
+	path = development/javascript/dgrid
+	url = https://github.com/SitePen/dgrid.git
+[submodule "development/javascript/dojo"]
+	path = development/javascript/dojo
+	url = https://github.com/dojo/dojo.git
+[submodule "development/javascript/dijit"]
+	path = development/javascript/dijit
+	url = https://github.com/dojo/dijit.git
