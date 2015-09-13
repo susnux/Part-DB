@@ -109,6 +109,11 @@ abstract class BaseController
                         'body' => class_to_array($class));
     }
 
+    /** @brief Returns information for a set of items (by query)
+     *  @param $query Array with elements 'query' (the WHERE clauses), 'order' (e.g. ORDER BY) and 'keywords'
+     *  @param $range_header Range header given by request (Array 'start' and 'end') or null
+     *  @param $table_name Name of the database table to work on (e.g. categories)
+     */ 
     protected function get_query_information($query, $range_header, $table_name)
     {
         // Check if Range header is set and if yes handle range
@@ -218,7 +223,10 @@ abstract class BaseController
         return array('status' => Http::no_content);
     }
 
-    /** */
+    /** @brief Checks if the 'IF-MATCH' and 'IF-NOT-MATCH' headers match.
+     *  @param $header Request-headers
+     *  @param $parameters Parameters given in request
+     */
     protected function check_match_headers($headers, $parameters)
     {
         if (isset($parameters['id']) && is_numeric($parameters['id']))

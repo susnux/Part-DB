@@ -9,10 +9,6 @@ function apiAutoload($classname)
     {
         $to_load = __DIR__ . '/controllers/' . $classname . '.php';
     }
-    elseif (preg_match('/[a-zA-Z]+Model$/', $classname))
-    {
-        $to_load = __DIR__ . '/models/' . $classname . '.php';
-    }
     elseif (preg_match('/[a-zA-Z]+View$/', $classname))
     {
         $to_load = __DIR__ . '/views/' . $classname . '.php';
@@ -25,6 +21,11 @@ function apiAutoload($classname)
     return false;
 }
 spl_autoload_register('apiAutoload');
+
+/* Controller: Interface from request -> Data
+ * View: Interface from Controller -> response 
+ *  --> Maybe we add more then json (e.g. html)
+ */
 
 $request = new Request();
 
