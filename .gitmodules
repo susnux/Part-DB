@@ -10,3 +10,12 @@
 [submodule "development/javascript/dijit"]
 	path = development/javascript/dijit
 	url = https://github.com/dojo/dijit.git
+[submodule "development/javascript/util"]
+	path = development/javascript/util
+	url = https://github.com/dojo/util.git
+[submodule "development/javascript/xstyle"]
+	path = development/javascript/xstyle
+	url = https://github.com/SitePen/xstyle.git
+[submodule "development/javascript/put-selector"]
+	path = development/javascript/put-selector
+	url = https://github.com/kriszyp/put-selector.git
