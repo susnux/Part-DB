@@ -65,10 +65,10 @@ var profile = (function(){
             'dojo/dojo': {
                 include: [
                     // Basics
-                    'dojo/dojo', 'dojo/ready', 'dojo/_base/declare',
+                    'dojo/dojo', 'dojo/ready',
                     // Start modifying here:
-               'dijit/Tree', 'dijit/tree/ForestStoreModel', 'dojo/data/ObjectStore', 'dijit/MenuBar',
-               'dijit/MenuBarItem',
+                    'dijit/Tree', 'dijit/tree/ForestStoreModel', 'dojo/data/ObjectStore',
+                    'dijit/MenuBar', 'dijit/MenuBarItem',
                     'dijit/layout/BorderContainer', 'dijit/layout/ContentPane',
                     'dijit/layout/SplitContainer', 'dijit/form/FilteringSelect',
                     'dijit/form/ComboButton', 'dijit/Menu', 'dijit/CheckedMenuItem',
@@ -76,6 +76,13 @@ var profile = (function(){
                 ],
                boot: true,
                customBase: true
+            },
+            'dgrid/dgrid': {
+                    include: [
+                        'dojo/_base/declare', 'dgrid/Selection', 'dgrid/Selector',
+                        'dgrid/OnDemandGrid', 'dgrid/Keyboard', 'dgrid/Selection',
+                        'dgrid/Tree', 'dgrid/Editor', 'xstyle/core/load-css'
+                    ]
             }
         }
     };
