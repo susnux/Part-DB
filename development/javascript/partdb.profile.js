@@ -1,14 +1,14 @@
 var profile = (function(){
     return {
-        basePath: "./",
-        releaseDir: "./release",
-        releaseName: "lib",
-        action: "release",
-        layerOptimize: "closure",
-        optimize: "closure",
-        cssOptimize: "comments",
-        mini: true,
-        stripConsole: "warn",
+        basePath:       "./",
+        releaseDir:     "./release",
+        releaseName:    "lib",
+        action:         "release",
+        layerOptimize:  "closure",
+        optimize:       "closure",
+        cssOptimize:    "comments",
+        mini:           true,
+        stripConsole:   "warn",
         selectorEngine: "lite",
 
         defaultConfig: {
@@ -68,20 +68,20 @@ var profile = (function(){
                     'dojo/dojo', 'dojo/ready',
                     // Start modifying here:
                     'dijit/Tree', 'dijit/tree/ForestStoreModel', 'dojo/data/ObjectStore',
-                    'dijit/MenuBar', 'dijit/MenuBarItem',
+                    'dijit/Menu', 'dijit/MenuBar', 'dijit/MenuBarItem', 'dijit/CheckedMenuItem',
                     'dijit/layout/BorderContainer', 'dijit/layout/ContentPane',
                     'dijit/layout/SplitContainer', 'dijit/form/FilteringSelect',
-                    'dijit/form/ComboButton', 'dijit/Menu', 'dijit/CheckedMenuItem',
-                    'dojo/store/JsonRest', 'dstore/legacy/StoreAdapter'
+                    'dijit/form/ComboButton', 'dojo/store/JsonRest', 'dojo/store/Cache', 'dojo/store/Memory'
                 ],
                boot: true,
                customBase: true
             },
             'dgrid/dgrid': {
                     include: [
-                        'dojo/_base/declare', 'dgrid/Selection', 'dgrid/Selector',
-                        'dgrid/OnDemandGrid', 'dgrid/Keyboard', 'dgrid/Selection',
-                        'dgrid/Tree', 'dgrid/Editor', 'xstyle/core/load-css'
+                        'dojo/_base/declare', 'dgrid/Selection', 'dgrid/selector',
+                        'dgrid/OnDemandGrid', 'dgrid/Keyboard', 'dgrid/tree',
+                        'dgrid/editor', 'dgrid/extensions/DijitRegistry',
+                        'xstyle/core/load-css'
                     ]
             }
         }

@@ -1,6 +1,3 @@
-[submodule "development/javascript/dstore"]
-	path = development/javascript/dstore
-	url = https://github.com/SitePen/dstore.git
 [submodule "development/javascript/dgrid"]
 	path = development/javascript/dgrid
 	url = https://github.com/SitePen/dgrid.git
