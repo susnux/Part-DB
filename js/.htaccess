@@ -1,8 +1,0 @@
-<IfModule mod_deflate.c>
-     Header  unset ETag
-    <FilesMatch "\.(js|jpg|jpeg|gif|png|html|css)$">
-        ExpiresActive on
-        ExpiresDefault "access plus 1 month"
-        SetOutputFilter DEFLATE
-    </FilesMatch>
-</IfModule>

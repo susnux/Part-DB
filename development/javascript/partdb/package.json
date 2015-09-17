@@ -1,0 +1,29 @@
+{
+  "name": "partdb",
+  "author": "Ferdinand Thiessen",
+  "version": "0.0.1",
+  "description": "Some modifications and own modules for the Part-DB",
+  "licenses": [
+     {
+         "type": "AFLv2.1",
+         "url": "http://trac.dojotoolkit.org/browser/dojo/trunk/LICENSE#L43"
+     },
+     {
+         "type": "BSD",
+         "url": "http://trac.dojotoolkit.org/browser/dojo/trunk/LICENSE#L13"
+     }
+  ],
+  "repository": {
+    "type":"git",
+    "url":"https://github.com/sandboxgangster/Part-DB"
+  },
+  "dependencies": {
+    "dojo": "1.7.2"
+  },
+  "directories": {
+    "lib": "."
+  },
+  "main": "./Cache",
+  "icon": "http://raw.githubusercontent.com/sandboxgangster/Part-DB/master/img/partdb/partdb.png",
+  "dojoBuild": "package.js"
+}

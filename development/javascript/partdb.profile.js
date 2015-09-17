@@ -8,7 +8,7 @@ var profile = (function(){
         optimize:       "closure",
         cssOptimize:    "comments",
         mini:           true,
-        stripConsole:   "warn",
+        stripConsole:   false,
         selectorEngine: "lite",
 
         defaultConfig: {
@@ -20,7 +20,8 @@ var profile = (function(){
                 "config-selectorEngine": "lite"
             },
             parseOnLoad: 0,
-            async: 1
+            async: 1,
+			locale:'de'
         },
 
         staticHasFeatures: {
@@ -56,7 +57,7 @@ var profile = (function(){
         },
 
         packages: [
-        'dojo', 'dijit', 'dgrid', 'dstore', 'xstyle', 'put-selector'
+        'dojo', 'dijit', 'dgrid', 'xstyle', 'put-selector', 'partdb'
         ],
 
         // Add new dependencies here:
@@ -67,22 +68,27 @@ var profile = (function(){
                     // Basics
                     'dojo/dojo', 'dojo/ready',
                     // Start modifying here:
-                    'dijit/Tree', 'dijit/tree/ForestStoreModel', 'dojo/data/ObjectStore',
+					'partdb/Submenu',
+                    /* Dependencies: 'dijit/Tree', 'dijit/tree/ForestStoreModel', 'dojo/data/ObjectStore',*/
                     'dijit/Menu', 'dijit/MenuBar', 'dijit/MenuBarItem', 'dijit/CheckedMenuItem',
                     'dijit/layout/BorderContainer', 'dijit/layout/ContentPane',
                     'dijit/layout/SplitContainer', 'dijit/form/FilteringSelect',
-                    'dijit/form/ComboButton', 'dojo/store/JsonRest', 'dojo/store/Cache', 'dojo/store/Memory'
+                    'dijit/form/ComboButton', 'dojo/store/JsonRest', 'partdb/Cache', 'dojo/store/Memory'
                 ],
+			   includeLocales: [ 'de' ],
                boot: true,
                customBase: true
             },
-            'dgrid/dgrid': {
-                    include: [
-                        'dojo/_base/declare', 'dgrid/Selection', 'dgrid/selector',
-                        'dgrid/OnDemandGrid', 'dgrid/Keyboard', 'dgrid/tree',
-                        'dgrid/editor', 'dgrid/extensions/DijitRegistry',
-                        'xstyle/core/load-css'
-                    ]
+            'partdb/partdb': {
+                include: [
+					'partdb/EditModule', 'xstyle/core/load-css'
+					/* Automatically included dependencies:
+					*'dgrid/Selection', 'dgrid/selector', 'dgrid/extensions/DnD',
+					'dgrid/OnDemandGrid', 'dgrid/Keyboard', 'dgrid/tree',
+					'dgrid/editor',*/ , /*'dijit/Dialog',
+					'dijit/form/CheckBox', 'dijit/form/TextBox', */
+                ],
+			   includeLocales: [ 'de' ]
             }
         }
     };
