@@ -62,16 +62,17 @@ abstract class BaseController
     /** @brief Constructor
       *        Sets database, log and current_user
       * @param  class_name Name of the managed class (e.g. Category, User, Part...)
+      * @param  query_parameters_whitelist List of valid parameters for query.
       * @throws Exception If database, log or user initialization failed.
       */
-    protected function __construct($class_name, $query_parameters_whitelist)
+    protected function __construct($class_name, $query_parameters_whitelist = array('id', 'parent', 'name'))
     {
         $this->database           = new Database();
         $this->log                = new Log($this->database);
         $this->current_user       = new User($this->database, $this->current_user, $this->log, 1); // admin
         $this->supported_methods         = array();
         $this->managed_class_name        = $class_name;
-        $this->query_parameters_whitelist = $query_parameters_whitelist
+        $this->query_parameters_whitelist = $query_parameters_whitelist;
     }
 
     /** @brief Return supported HTTP methods by this controller */
@@ -140,7 +141,7 @@ abstract class BaseController
         $data['headers']['Accept-Ranges'] = 'items';
         if ($range_header != null)
         {
-            $count_query = "SELECT COUNT(1) as number_of_categories FROM $table_name " . $query['query'] . $query['order'];
+            $count_query = "SELECT COUNT(1) as number_of_categories FROM $table_name " . $query['query'] . $order;
             $result = null;
             try
             {
@@ -173,7 +174,7 @@ abstract class BaseController
             $data['headers']['Content-Range'] = 'items ' . $range_header['start'] . '-' . $end . '/' . $result[0]['number_of_categories'];
         }
         
-        $query_str = "SELECT id FROM $table_name " . $query['query'] . $query['order'] . $range;
+        $query_str = "SELECT id FROM $table_name " . $query['query'] . $order . $range;
         $query_data = array();
         try
         {

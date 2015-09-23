@@ -29,8 +29,8 @@
         /** @brief Contructor of CategoriesController class. */
         public function __construct()
         {
-            parent::__construct('Category', array('id', 'parent', 'name'));
-            array_push($this->supported_methods, 'GET', 'DELETE', 'POST');
+            parent::__construct('Category');
+            array_push($this->supported_methods, 'GET', 'DELETE', 'POST', 'PUT');
         }
 
         /** Handles GET requests on categories,
@@ -164,10 +164,57 @@
                                                 $parent_id, $disable_footprints,
                                                 $disable_manufacturers, $disable_autodatasheets);
                 return array('status' => Http::created,
-                             'body' => array('id'     => $new_category->get_id(),
-                                             'name'   => $new_category->get_name(),
-                                             'parent' => $new_category->get_parent_id()),
+                             'body' => $this->class_to_array($new_category),
                              'headers' => array('Location' => 'http://' . $request->headers['Host'] . $_SERVER['REQUEST_URI']. '/' . $new_category->get_id()));
+            }
+            catch (Exception $e)
+            {
+                debug('error', 'Unexpected exception: ' . $e->getMessage(), __FILE__, __LINE__, __METHOD__);
+                return array('status' => Http::server_error);
+            }
+        }
+
+        /** @brief creates new category.
+            @param request Request object
+        */
+        public function put_action($request)
+        {
+            if (isset($request->url_elements[3])     || //Too much url arguments
+                !isset($request->parameters['name']) || // No name given
+                (!isset($request->url_elements[2]) || !is_numeric($request->url_elements[2])) || // To few arguments or not a number
+                (isset($request->parameters['parent']) && !is_numeric($request->parameters['parent'])))  // Parent given but not a number
+            {
+                return array('status' => Http::bad_request);
+            }
+            // Check headers:
+            try
+            {
+                if(!$this->check_match_headers($request->headers, $request->parameters))
+                {
+                    return array('status' => Http::precondition_failed); // given header If-Match or If-Non-Match failed
+                }
+            }
+            catch (Exception $e)
+            {
+                debug('error', 'Unexpected exception: ' . $e->getMessage(), __FILE__, __LINE__, __METHOD__);
+                return array('status' => Http::server_error);
+            }
+            $name                   = $request->parameters['name'];
+            $parent_id              = isset($request->parameters['parent']) ? (int)$request->parameters['parent'] : 0;
+            $disable_footprints     = isset($request->parameters['footprints']) ? (boolean)$request->parameters['footprints'] : false;
+            $disable_manufacturers  = isset($request->parameters['manufacturers']) ? (boolean)$request->parameters['manufacturers'] : false;
+            $disable_autodatasheets = isset($request->parameters['autodatasheets']) ? (boolean)$request->parameters['autodatasheets'] : false;
+            try
+            {
+                $category = new Category($this->database, $this->current_user, $this->log, (int)$request->url_elements[2]);
+                $category->set_attributes(array('name'                     => $name,
+                                                'parent_id'                => $parent_id,
+                                                'disable_footprints'       => $disable_footprints,
+                                                'disable_manufacturers'    => $disable_manufacturers,
+                                                'disable_autodatasheets'   => $disable_autodatasheets));
+                return array('status' => Http::created,
+                             'body' => $this->class_to_array($category),
+                             'headers' => array('Location' => 'http://' . $request->headers['Host'] . $_SERVER['REQUEST_URI']. '/' . $category->get_id()));
             }
             catch (Exception $e)
             {
