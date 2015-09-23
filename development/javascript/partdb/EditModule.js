@@ -2,20 +2,21 @@ define([
 'dojo/_base/declare', "dojo/_base/lang",
 'dijit/form/Button', 'dijit/Dialog',
 'dijit/form/CheckBox', 'dijit/form/TextBox',
+'dijit/layout/ContentPane',
 'dgrid/OnDemandGrid', 'dgrid/extensions/DnD',
 'dgrid/Keyboard', 'dgrid/Selection',
 'dgrid/editor', 'dgrid/selector', 'dgrid/tree'
 ], function(declare, lang, Button, Dialog,
-			CheckBox, TextBox, OnDemandGrid,
-			DnD, Keyboard, Selection, editor,
-			selector, tree)
+			CheckBox, TextBox, ContentPane,
+            OnDemandGrid, DnD, Keyboard,
+            Selection, editor, selector,
+            tree)
 {
 	return declare(null, {
 		//item_template: {},
 		//dialog: {},
 		//store
 		//item_template
-		buttons: [],
 		dialog: new Dialog({
 			title: "Achtung",
 			style: "width: 400px"
@@ -30,16 +31,9 @@ define([
 				throw "EditModule needs a attach_node."
 		},
 		show: function(){
-			if (this.grid) {
-				this.attach_node.addChild(this.grid);
-				this.grid.startup();
-				console.log(this.buttons);
-				for (var i in this.buttons) {
-					var button = this.buttons[i];
-					console.log(button);
-					this.attach_node.addChild(button);
-					button.startup();
-				}
+			if (this.widget) {
+				this.attach_node.addChild(this.widget);
+				this.widget.startup();
 			} else {
 				this._create_grid();
 			}
@@ -56,15 +50,16 @@ define([
 				var new_item = this.grid.dirty[id];
 				var item = this.store.get(id);
 				for (f in item) {
-					if (f.substring(0, 1) !== '_' && !new_item[f])
+                    if (f.substring(0, 1) !== '_' && new_item[f] === undefined)
 						new_item[f] = item[f];
 				}
 				items.push(new_item);
 				content += '<li>' + new_item.name + '</li>';
 			}
+			if (items.length == 0)
+                return;
 			content += '</ul><br />';
 			this.dialog.set('content', content);
-			console.log(items);
 			var ok = new Button({
 				label: 'Ok',
 				onClick: dojo.hitch(this, function() {
@@ -76,7 +71,7 @@ define([
 						}),
 						dojo.hitch(this, function(response){
 							//ERROR
-							console.log(response.status);
+							console.error(response.status);
 							this.dialog.set('content', "Error: " + response.status);
 						}));
 					this.dialog.destroyDescendants();
@@ -244,31 +239,37 @@ define([
 				allowSelectAll: true,
 				columns: this._create_colums()
 			});
-			this.buttons.push(new Button({
+			var remove = new Button({
 				label: 'Ausgewählte löschen',
 				onClick: dojo.hitch(this, this._remove)
-			}));
-			this.buttons.push(new Button({
+			});
+			var save = new Button({
 				label: 'Ausgewählte speichern',
 				onClick: dojo.hitch(this, this._save)
-			}));
-			this.buttons.push(new Button({
+			});
+			var reset = new Button({
 				label: 'Alle zurücksetzen',
 				onClick: dojo.hitch(this, function() {
 					this.grid.revert();
 				})
-			}));
-			this.buttons.push(new Button({
+			});
+			var create = new Button({
 				label: 'Neu erstellen',
 				onClick: dojo.hitch(this, this._create)
-			}));
-			this.attach_node.addChild(this.grid);
-			for (var i in this.buttons) {
-				var button = this.buttons[i];
-				this.attach_node.addChild(button);
-				button.startup();
-			}
-			this.grid.startup();
+			});
+            this.widget = new ContentPane();
+            this.attach_node.addChild(this.widget);
+            this.widget.startup();
+            this.widget.addChild(this.grid);
+            this.grid.startup();
+            this.widget.addChild(remove);
+            remove.startup();
+            this.widget.addChild(save);
+            save.startup();
+            this.widget.addChild(reset);
+            reset.startup();
+            this.widget.addChild(create);
+            create.startup();
 		}
 	});
 });

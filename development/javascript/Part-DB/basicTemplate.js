@@ -145,8 +145,9 @@ function initTemplate(){
 		menu_edit.addChild(new MenuItem({
 			label: 'Kategorien',
 			onClick: function() {
-				m_content.destroyDescendants();
-				m_content.set('content', '');
+				while(m_content.hasChildren())
+                    m_content.removeChild(0);
+                m_content.set('content', '');
 				var mod = m_warehouse.get('categories_edit');
 				if (mod == null) {
 					require(['partdb/partdb'], function() {
@@ -185,7 +186,8 @@ function initTemplate(){
 		menu_edit.addChild(new MenuItem({
 			label: 'Baugruppen',
 			onClick: function() {
-				m_content.destroyDescendants();
+                while(m_content.hasChildren())
+                    m_content.removeChild(0);
 				m_content.set('content', '');
 				var mod = m_warehouse.get('devices_edit');
 				if (mod == null) {
