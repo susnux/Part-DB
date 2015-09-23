@@ -55,19 +55,23 @@ abstract class BaseController
      *  @note When extending this class, simply add your accepted methods.
      */
     protected $supported_methods;
+    /** @brief Allowed query parameters
+    */
+    protected $query_parameters_whitelist;
 
     /** @brief Constructor
       *        Sets database, log and current_user
       * @param  class_name Name of the managed class (e.g. Category, User, Part...)
       * @throws Exception If database, log or user initialization failed.
       */
-    protected function __construct($class_name)
+    protected function __construct($class_name, $query_parameters_whitelist)
     {
         $this->database           = new Database();
         $this->log                = new Log($this->database);
         $this->current_user       = new User($this->database, $this->current_user, $this->log, 1); // admin
-        $this->supported_methods  = array();
-        $this->managed_class_name = $class_name;
+        $this->supported_methods         = array();
+        $this->managed_class_name        = $class_name;
+        $this->query_parameters_whitelist = $query_parameters_whitelist
     }
 
     /** @brief Return supported HTTP methods by this controller */
@@ -105,8 +109,8 @@ abstract class BaseController
                 return array('status' => Http::server_error);
             }
         }
-        return array(   'status' => Http::Ok,
-                        'body' => class_to_array($class));
+        return array(   'status' => Http::ok,
+                        'body' => $this->class_to_array($class));
     }
 
     /** @brief Returns information for a set of items (by query)
@@ -118,6 +122,21 @@ abstract class BaseController
     {
         // Check if Range header is set and if yes handle range
         $range = '';
+        $order = '';
+        $option_params = isset($request->parameters['sortedBy']) ? $request->parameters['sortedBy'] : null;
+        if ($option_params !== null)
+        {
+            $sort = explode(',', $option_params);
+            foreach ($sort as $key)
+            {
+                $order .= $order != '' ? ', ' : '';
+                if (!in_array(substr($key, 1), $this->query_parameters_whitelist) || 
+                    (($key[0] != '-') && ($key[0] != '+')))
+                    return array('status' => Http::bad_request);
+                $order .= substr($key, 1) . ' ' . ($key[0] == '+' ? 'ASC' : 'DESC');
+            }
+            $order = ' ORDER BY ' . $order;
+        }
         $data['headers']['Accept-Ranges'] = 'items';
         if ($range_header != null)
         {

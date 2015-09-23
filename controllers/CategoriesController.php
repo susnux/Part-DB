@@ -26,15 +26,11 @@
 
     class CategoriesController extends BaseController
     {
-        /** @brief Root category, only used as parent for "toplevel"-categories (e.g. getting them by parent_id) */
-        protected $root_category;
-
         /** @brief Contructor of CategoriesController class. */
         public function __construct()
         {
-            parent::__construct('Category');
+            parent::__construct('Category', array('id', 'parent', 'name'));
             array_push($this->supported_methods, 'GET', 'DELETE', 'POST');
-            $this->root_category = new Category($this->database, $this->current_user, $this->log, 0);
         }
 
         /** Handles GET requests on categories,
@@ -59,14 +55,14 @@
             }
             // No id given, so we are asked either to return a list of all, or to answer a query
             $query = ''; // An empty query is the same as request a list of all
-            $order = '';
             $keywords = array();
 
-            $query_params_whitelist = array('id', 'parent', 'name');
             // Check if query is given:
-            if (count(array_intersect_key($request->parameters, array_flip($query_params_whitelist))) > 0)
+            if (count(array_intersect_key($request->parameters, array_flip($this->query_parameters_whitelist))) > 0)
             {
-                $query_params = array_intersect_key($request->parameters, array_flip($query_params_whitelist));
+                $query_params = array_intersect_key(
+                    $request->parameters, array_flip($this->query_parameters_whitelist)
+                );
                 foreach ($query_params as $key => $value)
                 {
                     $query .= $query != '' ? ' AND ' : 'WHERE ';
@@ -96,20 +92,6 @@
                 }
             }
 
-            $option_params = array_intersect_key($request->parameters, array('sortedBy' => null));
-            if (count($option_params) > 0 && $option_params['sortedBy'] != null)
-            {
-                $sort = explode(',', $option_params['sortedBy']);
-                foreach ($sort as $key)
-                {
-                    $order .= $order != '' ? ', ' : '';
-                    if (!in_array(substr($key, 1), $query_params_whitelist) || 
-                        (($key[0] != '-') && ($key[0] != '+')))
-                        return array('status' => Http::bad_request);
-                    $order .= substr($key, 1) . ' ' . ($key[1] == '+' ? 'ASC' : 'DESC');
-                }
-                $order = ' ORDER BY ' . $order;
-            }
             $headers = null;
             if (isset($request->headers['Range']))
             {
@@ -117,7 +99,6 @@
             }
             return $this->get_query_information(
                             array(  'query' => $query,
-                                    'order' => $order,
                                     'keywords' => $keywords),
                             $headers, 'categories');
         }

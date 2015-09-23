@@ -40,6 +40,7 @@ abstract class Http
     const bad_request           = 400;
     const not_found             = 404;
     const method_not_allowed    = 405;
+    const conflict              = 409;
     const precondition_failed   = 412;
     const range_not_satisfiable = 416;
     const server_error          = 500;
