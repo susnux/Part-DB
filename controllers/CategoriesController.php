@@ -204,23 +204,11 @@
             $disable_footprints     = isset($request->parameters['footprints']) ? (boolean)$request->parameters['footprints'] : false;
             $disable_manufacturers  = isset($request->parameters['manufacturers']) ? (boolean)$request->parameters['manufacturers'] : false;
             $disable_autodatasheets = isset($request->parameters['autodatasheets']) ? (boolean)$request->parameters['autodatasheets'] : false;
-            try
-            {
-                $category = new Category($this->database, $this->current_user, $this->log, (int)$request->url_elements[2]);
-                $category->set_attributes(array('name'                     => $name,
-                                                'parent_id'                => $parent_id,
-                                                'disable_footprints'       => $disable_footprints,
-                                                'disable_manufacturers'    => $disable_manufacturers,
-                                                'disable_autodatasheets'   => $disable_autodatasheets));
-                return array('status' => Http::created,
-                             'body' => $this->class_to_array($category),
-                             'headers' => array('Location' => 'http://' . $request->headers['Host'] . $_SERVER['REQUEST_URI']. '/' . $category->get_id()));
-            }
-            catch (Exception $e)
-            {
-                debug('error', 'Unexpected exception: ' . $e->getMessage(), __FILE__, __LINE__, __METHOD__);
-                return array('status' => Http::server_error);
-            }
+            return $this->edit_item(array('name'                     => $name,
+                                          'parent_id'                => $parent_id,
+                                          'disable_footprints'       => $disable_footprints,
+                                          'disable_manufacturers'    => $disable_manufacturers,
+                                          'disable_autodatasheets'   => $disable_autodatasheets), (int)$request->url_elements[2]);
         }
 
         /** @copydoc BaseController::class_to_array($class) */

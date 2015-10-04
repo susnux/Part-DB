@@ -243,6 +243,27 @@ abstract class BaseController
         return array('status' => Http::no_content);
     }
 
+    /** @brief Edit selected item
+     *  @param $attributes Attributes to set
+     *  @param $id Id of the given item
+    */
+    protected function edit_item($attributes, $id)
+    {
+        try
+        {
+            $item = new $this->managed_class_name($this->database, $this->current_user, $this->log, $id);
+            $item->set_attributes($attributes);
+            return array('status' => Http::created,
+                         'body' => $this->class_to_array($item),
+                         'headers' => array('Location' => 'http://' . $request->headers['Host'] . $_SERVER['REQUEST_URI']. '/' . $item->get_id()));
+        }
+        catch (Exception $e)
+        {
+            debug('error', 'Unexpected exception: ' . $e->getMessage(), __FILE__, __LINE__, __METHOD__);
+            return array('status' => Http::server_error);
+        }
+    }
+
     /** @brief Checks if the 'IF-MATCH' and 'IF-NOT-MATCH' headers match.
      *  @param $header Request-headers
      *  @param $parameters Parameters given in request
@@ -311,12 +332,5 @@ abstract class BaseController
         }
         return true; // Ok no header
     }
-    /* Stub implementation for a method would be:
-     * (Returning 405 for wrong method ;-)  )
-     * public function get_action()
-     * {
-     *     return array('status' => 405);
-     * }
-     */
 }
 ?>
