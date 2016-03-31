@@ -29,149 +29,25 @@
         /** @brief Contructor of CategoriesController class. */
         public function __construct()
         {
-            parent::__construct('Category');
+            parent::__construct('Category', 'categories');
             array_push($this->supported_methods, 'GET', 'DELETE', 'POST', 'PUT');
-        }
-
-        /** Handles GET requests on categories,
-            .../categories/{id}          will fetch data about the category with the given id or return code 204 if not exsists
-            .../categories               will fetch all available categories, you can use the 'Range' header
-            .../categories?KEY=VALUE     will fetch categories with KEY as attribute with value VALUE.
-                                         optional parameters are: sortedBy=+/-KEY,+/-OTHERKEY,...
-
-            @brief Handles GET requests on categories.
-            @param request Request object on which we should respond.
-            @return Array which contains at least on of this elements:
-                    'status'  => INTEGER (HTTP status to send)
-                    'body'    => ARRAY   Containing category element(s)
-                    'headers' => ARRAY   Containing various headers to set.*/
-        public function get_action($request)
-        {
-            // Check if element ID is given (e.g. /api.php/fooBar/ID where id is numeric)
-            if(isset($request->url_elements[2]) && is_numeric($request->url_elements[2]))
-            {
-                // Is given, so we should return information about the item
-                return $this->get_single_information($request->url_elements[2]);
-            }
-            // No id given, so we are asked either to return a list of all, or to answer a query
-            $query = ''; // An empty query is the same as request a list of all
-            $keywords = array();
-
-            // Check if query is given:
-            if (count(array_intersect_key($request->parameters, array_flip($this->query_parameters_whitelist))) > 0)
-            {
-                $query_params = array_intersect_key(
-                    $request->parameters, array_flip($this->query_parameters_whitelist)
-                );
-                foreach ($query_params as $key => $value)
-                {
-                    $query .= $query != '' ? ' AND ' : 'WHERE ';
-                    switch ($key)
-                    {
-                        case 'id':
-                            if (!is_numeric($value))
-                                return array('status' => Http::bad_request);
-                            $query .= "id <=> ?";
-                            $keywords[] = $value;
-                            break;
-                        case 'name':
-                            $query .= "name LIKE ?";
-                            $keywords[] = str_replace('*', '%', $value);
-                            break;
-                        case 'parent':
-                            if (!is_numeric($value))
-                                return array('status' => Http::bad_request);
-                            $query .= "parent_id <=> ?";
-                            $keywords[] = $value == 0 ? null : $value;
-                            break;
-                        default:
-                            debug('error', 'Unknown query-parameter given, can not handle it.',
-                                __FILE__, __LINE__, __METHOD__);
-                                return array('status' => Http::server_error);
-                    }
-                }
-            }
-
-            $headers = null;
-            if (isset($request->headers['Range']))
-            {
-                $headers = $request->headers['Range'];
-            }
-            return $this->get_query_information(
-                            array(  'query' => $query,
-                                    'keywords' => $keywords),
-                            $headers, 'categories');
         }
 
         /** @copydoc BaseController::delete_item */
         public function delete_action($request)
         {
             // Check if element ID is given (e.g. /api.php/fooBar/ID where id is numeric)
-            if(isset($request->url_elements[2]) && is_numeric($request->url_elements[2]) && (int)$request->url_elements[2] > 0)
-            {
-                function condition_function ($object)
-                {
-                    $count = count($object->get_parts());
-                    if ($count > 0)
+            return BaseController::delete_action($request,
+                function ($object)
                     {
-                        debug('warning', 'Category not empty, can not delete it.', __FILE__, __LINE__, __METHOD__);
-                        return false;
-                    }
-                    return true;
-                }
-                $condition = 'condition_function';
-                return $this->delete_item($request->url_elements[2], $condition);
-            }
-            else
-            {
-                // No id given -> Invalid request
-                return array('status' => Http::bad_request);
-            }
-        }
-
-        /** @brief creates new category.
-            @param request Request object
-        */
-        public function post_action($request)
-        {
-            if (isset($request->url_elements[2])     || //Too much url arguments
-                !isset($request->parameters['name']) || // No name given
-                (isset($request->parameters['parent']) && !is_numeric($request->parameters['parent'])))  // Parent given but not a number
-            {
-                return array('status' => Http::bad_request);
-            }
-            // Check headers:
-            try
-            {
-                if(!$this->check_match_headers($request->headers, $request->parameters))
-                {
-                    return array('status' => Http::precondition_failed); // given header If-Match or If-Non-Match failed
-                }
-            }
-            catch (Exception $e)
-            {
-                debug('error', 'Unexpected exception: ' . $e->getMessage(), __FILE__, __LINE__, __METHOD__);
-                return array('status' => Http::server_error);
-            }
-            $name                   = $request->parameters['name'];
-            $parent_id              = isset($request->parameters['parent']) ? (int)$request->parameters['parent'] : 0;
-            $disable_footprints     = isset($request->parameters['footprints']) ? (boolean)$request->parameters['footprints'] : false;
-            $disable_manufacturers  = isset($request->parameters['manufacturers']) ? (boolean)$request->parameters['manufacturers'] : false;
-            $disable_autodatasheets = isset($request->parameters['autodatasheets']) ? (boolean)$request->parameters['autodatasheets'] : false;
-            try
-            {
-                $new_category = Category::add(  $this->database, $this->current_user, $this->log, $name,
-                                                $parent_id, $disable_footprints,
-                                                $disable_manufacturers, $disable_autodatasheets);
-                return array('status' => Http::created,
-                             'body' => $this->class_to_array($new_category),
-                             'headers' => array('Location' => 'http://' . $request->headers['Host'] . $_SERVER['REQUEST_URI']. '/' . $new_category->get_id()));
-            }
-            catch (Exception $e)
-            {
-                debug('error', 'Unexpected exception: ' . $e->getMessage(), __FILE__, __LINE__, __METHOD__);
-                return array('status' => Http::server_error);
-            }
+                        $count = count($object->get_parts());
+                        if ($count > 0)
+                        {
+                            debug('warning', 'Category not empty, can not delete it.', __FILE__, __LINE__, __METHOD__);
+                            return false;
+                        }
+                        return true;
+                    });
         }
 
         /** @brief creates new category.
@@ -200,7 +76,7 @@
                 return array('status' => Http::server_error);
             }
             $name                   = $request->parameters['name'];
-            $parent_id              = isset($request->parameters['parent']) ? (int)$request->parameters['parent'] : 0;
+            $parent_id              = isset($request->parameters['parent_id']) ? (int)$request->parameters['parent_id'] : 0;
             $disable_footprints     = isset($request->parameters['footprints']) ? (boolean)$request->parameters['footprints'] : false;
             $disable_manufacturers  = isset($request->parameters['manufacturers']) ? (boolean)$request->parameters['manufacturers'] : false;
             $disable_autodatasheets = isset($request->parameters['autodatasheets']) ? (boolean)$request->parameters['autodatasheets'] : false;
@@ -216,10 +92,31 @@
         {
             return array(   'id' => $class->get_id(),
                             'name' => $class->get_name(),
-                            'parent' => $class->get_parent_id(),
+                            'parent_id' => (int)$class->get_parent_id(),
                             'manufacturers' => (boolean)$class->get_disable_manufacturers(),
                             'autodatasheets' => (boolean)$class->get_disable_autodatasheets(),
                             'footprints' => (boolean)$class->get_disable_footprints());
+        }
+
+        /** @copydoc BaseController::array_to_class($array) */
+        protected function array_to_class($array)
+        {
+            if (!isset($array['name']) || // No name given
+                (isset($array['parent_id']) && !is_numeric($array['parent_id'])))  // Parent given but not a number
+            {
+                throw InvalidArgumentException("Parameter not set or type invalid.");
+            }
+            $name                   = $array['name'];
+            $parent_id              = isset($array['parent_id']) ? (int)$array['parent_id'] : 0;
+            $disable_footprints     = isset($array['footprints']) ? (boolean)$array['footprints'] : false;
+            $disable_manufacturers  = isset($array['manufacturers']) ? (boolean)$array['manufacturers'] : false;
+            $disable_autodatasheets = isset($array['autodatasheets']) ? (boolean)$array['autodatasheets'] : false;
+            return Category::add($this->database,
+                                $this->current_user,
+                                $this->log,
+                                $name,
+                                $parent_id, $disable_footprints,
+                                $disable_manufacturers, $disable_autodatasheets);
         }
     }
 ?>

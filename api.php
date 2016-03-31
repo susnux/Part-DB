@@ -39,8 +39,7 @@ if (array_key_exists(1, $request->url_elements)) {
 // If not return 404, we have no such controller
 if (class_exists($controller_name)) {
     $controller = new $controller_name();
-    $action_name = strtolower($request->method) . '_action';
-    if (!method_exists($controller, $action_name)) {
+    if(!in_array(strtoupper($request->method), $controller->get_supported_methods())) {
         /* Our server knows this method, but our controller does not.
          * So it is not allowed on this resource 
          * -> 405 NOT 501 (which means that our server would not know this typ).
@@ -50,7 +49,7 @@ if (class_exists($controller_name)) {
         header('Allow: ' . strtoupper(implode(", ", $controller->get_supported_methods())));
         exit();
     }
-
+    $action_name = strtolower($request->method) . '_action';
     $result = $controller->$action_name($request);
     if (isset($result['status']))
         http_response_code($result['status']);

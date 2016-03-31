@@ -59,6 +59,26 @@ sudo service apache2 restart
 </code>
 
 Nähere Informationen dazu gibts z.B. hier: [[https://help.ubuntu.com/community/EnablingUseOfApacheHtaccessFiles]]
+==== NGINX konfigurieren ====
+
+In den meisten Fällen hat man etwas wie dieses in der Nginx Konfiguration stehen:
+<code>
+location ~ \.php$ {
+    try_files $uri =404;
+    fastcgi_pass  unix://...;
+    fastcgi_index index.php;
+    fastcgi_param SCRIPT_FILENAME $document_root/$fastcgi_script_name;
+    include       fastcgi_params;
+}
+</code>
+In einem solchen Fall muss die Konfiguration um diesen Abschnitt ergänzt werden:
+<code>
+location ~ ^/api.php/(.*)$ {
+    include fastcgi_params;
+    fastcgi_param  SCRIPT_FILENAME $document_root/api.php;
+    fastcgi_pass unix://...;
+}
+</code>
 
 ==== PHP konfigurieren ====
 

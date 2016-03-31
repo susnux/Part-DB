@@ -56,8 +56,22 @@ abstract class BaseController
      */
     protected $supported_methods;
     /** @brief Allowed query parameters
+        Array: NAME - is string
+        (STRING => BOOL)
     */
-    protected $query_parameters_whitelist;
+    protected $all_query_parameters;
+    /** @brief Name of SQL table
+    */
+    protected $sql_table;
+    /** @brief Converts given class instance to array with membervariables
+        @note You need to implement this function if you extend your class from this.
+              Example for this function would be:
+              class with members "id", "parent_id", "name":
+              return array('id' => $class->get_id(), 'parent' => $class->get_parent_id(), '' => $class->get_name());
+    */
+    abstract protected function class_to_array($class);
+    
+    abstract protected function array_to_class($array);
 
     /** @brief Constructor
       *        Sets database, log and current_user
@@ -65,14 +79,15 @@ abstract class BaseController
       * @param  query_parameters_whitelist List of valid parameters for query.
       * @throws Exception If database, log or user initialization failed.
       */
-    protected function __construct($class_name, $query_parameters_whitelist = array('id', 'parent', 'name'))
+    protected function __construct($class_name, $sql_table, $all_query_parameters = array('id'=>false, 'parent_id' => false, 'name' => true))
     {
         $this->database           = new Database();
         $this->log                = new Log($this->database);
         $this->current_user       = new User($this->database, $this->current_user, $this->log, 1); // admin
-        $this->supported_methods         = array();
-        $this->managed_class_name        = $class_name;
-        $this->query_parameters_whitelist = $query_parameters_whitelist;
+        $this->supported_methods  = array();
+        $this->managed_class_name = $class_name;
+        $this->sql_table          = $sql_table;
+        $this->all_query_parameters = $all_query_parameters;
     }
 
     /** @brief Return supported HTTP methods by this controller */
@@ -81,13 +96,139 @@ abstract class BaseController
         return $this->supported_methods;
     }
 
-    /** @brief Converts given class instance to array with membervariables
-        @note You need to implement this function if you extend your class from this.
-              Example for this function would be:
-              class with members "id", "parent_id", "name":
-              return array('id' => $class->get_id(), 'parent' => $class->get_parent_id(), '' => $class->get_name());
+    /** Handles GET requests on categories,
+            .../XYZ/{id}          will fetch data about the element with the given id or return code 204 if not exsists
+            .../XYZ               will fetch all available elements, you can use the 'Range' header
+            .../XYZ?KEY=VALUE     will fetch categories with KEY as attribute with value VALUE.
+                                         optional parameters are: sortedBy=+/-KEY,+/-OTHERKEY,...
+
+            @brief Handles GET requests.
+            @param request Request object on which we should respond.
+            @return Array which contains at least on of this elements:
+                    'status'  => INTEGER (HTTP status to send)
+                    'body'    => ARRAY   Containing element(s)
+                    'headers' => ARRAY   Containing various headers to set.*/
+    public function get_action($request)
+    {
+        // Check if element ID is given (e.g. /api.php/fooBar/ID where id is numeric)
+        if(isset($request->url_elements[2]) && is_numeric($request->url_elements[2]))
+        {
+            // Is given, so we should return information about the item
+            return $this->get_single_information($request->url_elements[2]);
+        }
+        // No id given, so we are asked either to return a list of all, or to answer a query
+        $query = ''; // An empty query is the same as request a list of all
+        $order = '';
+        $keywords = array();
+
+        $query_params = array_intersect_key($request->parameters, $this->all_query_parameters);
+        // Check if query is given:
+        if (count($query_params) > 0)
+        {
+            foreach ($query_params as $key => $value)
+            {
+                $query .= $query != '' ? ' AND ' : 'WHERE ';
+                if ($this->all_query_parameters[$key] === true) {
+                    $query .= "$key LIKE ?";
+                    $keywords[] = str_replace('*', '%', $value);
+                } else if ($this->all_query_parameters[$key] === false) {
+                    if (!is_numeric($value))
+                        return array('status' => Http::bad_request);
+                    $query .= "$key <=> ?";
+                    $keywords[] = $value;
+                } else {
+                    debug('error', 'Unknown query-parameter given, can not handle it.',
+                        __FILE__, __LINE__, __METHOD__);
+                    return array('status' => Http::server_error);
+                }
+            }
+        } else {
+            debug('info', 'No valid parameters.',
+                        __FILE__, __LINE__, __METHOD__);
+            return array('status' => Http::bad_request);
+        }
+
+        $option_params = array_intersect_key($request->parameters, array('sortedBy' => null));
+        if (count($option_params) > 0 && $option_params['sortedBy'] != null)
+        {
+            $sort = explode(',', $option_params['sortedBy']);
+            foreach ($sort as $key)
+            {
+                $order .= $order != '' ? ', ' : '';
+                if (!in_array(substr($key, 1), $this->all_query_parameters) || 
+                    (($key[0] != '-') && ($key[0] != '+')))
+                    return array('status' => Http::bad_request);
+                $order .= substr($key, 1) . ' ' . ($key[1] == '+' ? 'ASC' : 'DESC');
+            }
+            $order = ' ORDER BY ' . $order;
+        }
+        $headers = null;
+        if (isset($request->headers['Range']))
+        {
+            $headers = $request->headers['Range'];
+        }
+        return $this->get_query_information(
+                        array(  'query' => $query,
+                                'order' => $order,
+                                'keywords' => $keywords),
+                        $headers, $this->sql_table);
+    }
+
+    /** @brief creates new device.
+        @param request Request object
     */
-    abstract protected function class_to_array($class);
+    public function post_action($request)
+    {
+        if (isset($request->url_elements[2])) //Too much url arguments
+        {
+            return array('status' => Http::bad_request);
+        }
+        // Check headers:
+        try
+        {
+            if(!$this->check_match_headers($request->headers, $request->parameters))
+            {
+                return array('status' => Http::precondition_failed); // given header If-Match or If-Non-Match failed
+            }
+        }
+        catch (Exception $e)
+        {
+            debug('error', 'Unexpected exception: ' . $e->getMessage(), __FILE__, __LINE__, __METHOD__);
+            return array('status' => Http::server_error);
+        }
+        try
+        {
+            $new_device = array_to_class($request->parameters);
+            return array('status' => Http::created,
+                            'body' => class_to_array($new_device),
+                            'headers' => array('Location' => 'http://' . $request->headers['Host'] . $_SERVER['REQUEST_URI']. '/' . $new_device->get_id()));
+        }
+        catch (InvalidArgumentException $e)
+        {
+            debug('info', $e->getMessage(), __FILE__, __LINE__, __METHOD__);
+            return array('status' => Http::bad_request);
+        }
+        catch (Exception $e)
+        {
+            debug('error', 'Unexpected exception: ' . $e->getMessage(),__FILE__, __LINE__, __METHOD__);
+            return array('status' => Http::server_error);
+        }
+    }
+
+    /** @copydoc BaseController::delete_item */
+    public function delete_action($request, $condition = null)
+    {
+        // Check if element ID is given (e.g. /api.php/fooBar/ID where id is numeric)
+        if(isset($request->url_elements[2]) && is_numeric($request->url_elements[2]) && (int)$request->url_elements[2] > 0)
+        {
+            return $this->delete_item($request->url_elements[2], $condition);
+        }
+        else
+        {
+            // No id given -> Invalid request
+            return array('status' => Http::bad_request);
+        }
+    }
 
     /** @brief Returns result object with information about a single item 
         @param id Id of the element which to fetch.
@@ -141,7 +282,7 @@ abstract class BaseController
         $data['headers']['Accept-Ranges'] = 'items';
         if ($range_header != null)
         {
-            $count_query = "SELECT COUNT(1) as number_of_categories FROM $table_name " . $query['query'] . $order;
+            $count_query = "SELECT COUNT(1) as number_of_elements FROM $table_name " . $query['query'] . $order;
             $result = null;
             try
             {
@@ -153,25 +294,25 @@ abstract class BaseController
                 __FILE__, __LINE__, __METHOD__);
                 return array('status' => Http::server_error);
             }
-            if ($result[0]['number_of_categories'] == 0)
+            if ($result[0]['number_of_elements'] == 0)
                 return array('status' => Http::no_content);
-            if ($range_header['start'] >= $result[0]['number_of_categories'])
+            if ($range_header['start'] >= $result[0]['number_of_elements'])
             {
                 debug('warning', 'Requested Range of: ' . $range_header['start'] .
-                '-' . $range_header['end'] . ' Categories could not be satisfied.',
+                '-' . $range_header['end'] . ' Elements could not be satisfied.',
                 __FILE__, __LINE__, __METHOD__);
                 return array('status' => Http::range_not_satisfiable);
             }
             $duration = $range_header['end'] - $range_header['start'] + 1;
             $end = $range_header['end'];
             // Real end (e.g. header end is greater then we have items)
-            if (($result[0]['number_of_categories'] - 1) < $range_header['end'])
+            if (($result[0]['number_of_elements'] - 1) < $range_header['end'])
             {
-                $end = $result[0]['number_of_categories'] - 1;
+                $end = $result[0]['number_of_elements'] - 1;
             }
             $range = ' LIMIT ' . $range_header['start'] . ', ' . $duration;
             $data['status'] = Http::partial_content;
-            $data['headers']['Content-Range'] = 'items ' . $range_header['start'] . '-' . $end . '/' . $result[0]['number_of_categories'];
+            $data['headers']['Content-Range'] = 'items ' . $range_header['start'] . '-' . $end . '/' . $result[0]['number_of_elements'];
         }
         
         $query_str = "SELECT id FROM $table_name " . $query['query'] . $order . $range;
@@ -204,11 +345,10 @@ abstract class BaseController
     {
         if ($condition == null)
         {
-            function condition_func($obj)
+            $condition = function($obj)
             {
                 return true;
-            }
-            $condition = 'condition_func';
+            };
         }
         $class = null;
         try
